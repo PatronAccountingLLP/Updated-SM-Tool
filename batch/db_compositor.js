@@ -216,13 +216,35 @@ async function renderPost(spec,size){
 
   const hl=Math.round(w*((style==='text_icon')?0.075:(landscape?0.05:0.062)));
   ctx.font='700 '+hl+'px PatronDisplay';
-  const lines=wrap(ctx,spec.headline,textMaxW); const lineH=hl*1.14;
-  lines.forEach((ln,i)=>{ const last=i===lines.length-1;
-    if(last&&spec.accentLast!==false){ const words=ln.split(' ');const head=words.slice(0,-1).join(' ');const tail=words[words.length-1];
-      let x=tx; if(head){ctx.fillStyle=C.white;ctx.fillText(head+' ',x,yCursor);x+=ctx.measureText(head+' ').width;}
-      const tw=ctx.measureText(tail).width;ctx.fillStyle=scheme.accent;rr(ctx,x-8,yCursor-3,tw+16,hl+8,7);ctx.fill();
-      ctx.fillStyle=C.white;ctx.fillText(tail,x,yCursor);
-    } else {ctx.fillStyle=C.white;ctx.fillText(ln,tx,yCursor);} yCursor+=lineH; });
+  const lineH=hl*1.14;
+  const sp=ctx.measureText(' ').width;
+  // tokens of the accent phrase (lowercased) to box wherever they appear in the headline
+  const accentSet = new Set(String(spec.accent||'').toLowerCase().split(/\s+/).filter(Boolean));
+  // greedy word-wrap into lines of {text} tokens
+  const allWords = String(spec.headline||'').split(/\s+/).filter(Boolean);
+  const lines=[]; let cur=[];
+  for (const wd of allWords){
+    const trial=[...cur,wd].join(' ');
+    if (ctx.measureText(trial).width>textMaxW && cur.length){ lines.push(cur); cur=[wd]; }
+    else cur.push(wd);
+  }
+  if (cur.length) lines.push(cur);
+  // draw each line; box only words that belong to the accent phrase
+  for (const lineWords of lines){
+    let x=tx;
+    for (const wd of lineWords){
+      const ww=ctx.measureText(wd).width;
+      const isAccent = accentSet.has(wd.toLowerCase().replace(/[^a-z0-9-]/gi,''));
+      if (isAccent){
+        ctx.fillStyle=scheme.accent; rr(ctx,x-6,yCursor-3,ww+12,hl+8,6); ctx.fill();
+        ctx.fillStyle=C.white; ctx.fillText(wd,x,yCursor);
+      } else {
+        ctx.fillStyle=C.white; ctx.fillText(wd,x,yCursor);
+      }
+      x += ww + sp;
+    }
+    yCursor+=lineH;
+  }
   yCursor+=pad*0.35;
 
   const pills=[].concat(spec.bullets||[]); if(spec.dueText)pills.push(spec.dueText);
