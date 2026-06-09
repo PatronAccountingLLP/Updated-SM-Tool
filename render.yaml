@@ -1,0 +1,27 @@
+# Render Blueprint — deploys Patron Social Studio (now with the 7-day batch generator).
+# On render.com: New → Blueprint → connect this repo. Render reads this file,
+# creates the web service, and asks you to paste the secret values.
+#
+# IMPORTANT: the batch generator renders images on the server (@napi-rs/canvas).
+# The free plan can render a few days at a time (use the "Days to render" picker).
+# For a full 196-post batch in one click, change plan: free -> plan: starter.
+services:
+  - type: web
+    name: patron-social-studio
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: N8N_TOPIC_WEBHOOK
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_TEXT_MODEL
+        value: gpt-4o-mini
+      - key: PUBLER_API_KEY
+        sync: false
+      - key: PUBLER_WORKSPACE_ID
+        sync: false
+      - key: PUBLER_BASE
+        value: https://app.publer.com/api/v1

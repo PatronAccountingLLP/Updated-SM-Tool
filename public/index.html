@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Patron Social Studio — 7-Day Planner</title>
+<style>
+  :root{
+    --navy:#0b2147; --navy-deep:#081a39; --orange:#ff5f1b; --orange-dark:#e8541e;
+    --ink:#1d2433; --muted:#5b6678; --line:#e6e9ef; --paper:#f4f6fa; --white:#fff;
+    --display:'Poppins','Segoe UI',system-ui,sans-serif; --body:'Inter','Segoe UI',system-ui,sans-serif;
+    --radius:14px; --shadow:0 6px 22px rgba(11,33,71,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--body);color:var(--ink);background:var(--paper);line-height:1.5}
+  a{color:var(--orange);text-decoration:none}
+  /* header like patronaccounting.com */
+  header.site{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+  .hwrap{max-width:1180px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand .mark{width:34px;height:34px;border-radius:8px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:18px}
+  .brand b{font-family:var(--display);font-weight:700;color:var(--navy);font-size:18px;letter-spacing:.2px}
+  .brand b span{color:var(--orange)}
+  .hcontact{display:flex;align-items:center;gap:18px;font-size:13px;color:var(--muted)}
+  .hcontact a{color:var(--navy);font-weight:600}
+  .status{display:flex;gap:14px}
+  .chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#cbd3e0}
+  .dot.on{background:#1faa59}.dot.off{background:#d9534f}
+  /* hero */
+  .hero{background:linear-gradient(180deg,#fff, var(--paper));border-bottom:1px solid var(--line)}
+  .hwrap2{max-width:1180px;margin:0 auto;padding:34px 22px 26px}
+  .eyebrow{color:var(--orange);font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:2px;text-transform:uppercase}
+  h1{font-family:var(--display);font-weight:700;color:var(--navy);font-size:38px;line-height:1.1;margin:10px 0 8px}
+  h1 i{color:var(--orange);font-style:italic}
+  .sub{color:var(--muted);font-size:16px;max-width:680px}
+  main{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+  label{display:block;font-family:var(--display);font-weight:600;font-size:13px;color:var(--navy);margin-bottom:6px}
+  select,input[type=date]{width:100%;font-family:var(--body);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px;outline:none;transition:.15s}
+  select:focus,input:focus{border-color:var(--navy)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:780px){.grid,.grid2{grid-template-columns:1fr}}
+  .platrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .platpick{padding:9px 14px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;background:#fff;user-select:none;transition:.15s}
+  .platpick.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn{font-family:var(--display);font-weight:600;font-size:15px;border:none;border-radius:11px;padding:13px 22px;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--orange);color:#fff}.btn-primary:hover{background:var(--orange-dark)}
+  .btn-primary:disabled{opacity:.6;cursor:default}
+  .btn-navy{background:var(--navy);color:#fff}.btn-navy:hover{background:var(--navy-deep)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .note{color:var(--muted);font-size:13px}
+  .section-title{font-family:var(--display);font-weight:700;color:var(--navy);font-size:22px;margin:30px 0 4px}
+  /* ---- mobile responsiveness ---- */
+  @media(max-width:780px){
+    .hwrap{padding:11px 14px;flex-wrap:wrap;gap:10px}
+    .hcontact{gap:10px;font-size:12px;flex-wrap:wrap}
+    .hcontact a{display:none} /* hide site link on phones to save room */
+    .hwrap2{padding:22px 16px 18px}
+    h1{font-size:26px}
+    .sub{font-size:14px}
+    main{padding:18px 14px 48px}
+    .card{padding:16px}
+    .btn{padding:12px 18px;font-size:14px}
+    .gallery{grid-template-columns:1fr;gap:14px}
+    .modal{padding:10px;align-items:flex-start}
+    .modal .box{max-width:100%;padding:16px;margin-top:10px;max-height:92vh;overflow:auto}
+    .section-title{font-size:19px}
+    .daybtn{padding:7px 12px;font-size:12px}
+    #openSettings,#openAdmin{padding:7px 11px;font-size:12px}
+  }
+  @media(max-width:420px){
+    h1{font-size:22px}
+    .brand b{font-size:16px}
+    .platpick{padding:8px 11px;font-size:12px}
+  }
+  /* gallery */
+  .daybar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+  .daybtn{padding:8px 15px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:600;font-size:13px;cursor:pointer}
+  .daybtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:8px}
+  .post{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .post .imgwrap{position:relative;background:#0b2147}
+  .post img{width:100%;display:block}
+  .post .pl{position:absolute;top:10px;left:10px;background:rgba(11,33,71,.86);color:#fff;font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;text-transform:capitalize}
+  .post .carbadge{position:absolute;top:10px;right:10px;background:var(--orange);color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px}
+  .post .body{padding:13px 14px;display:flex;flex-direction:column;gap:9px;flex:1}
+  .post .cap{font-size:12.5px;color:var(--ink);white-space:pre-wrap;max-height:120px;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:9px}
+  .post .meta{font-size:11px;color:var(--muted)}
+  .post .row{display:flex;gap:8px;margin-top:auto}
+  .post .row .btn{flex:1;padding:9px;font-size:13px}
+  .thumbs{display:flex;gap:5px;overflow:auto;padding:8px;background:#0b2147}
+  .thumbs img{height:54px;width:auto;border-radius:5px;cursor:pointer;opacity:.6;border:2px solid transparent}
+  .thumbs img.sel{opacity:1;border-color:var(--orange)}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:11px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:100}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .banner{background:#fff4ec;border:1px solid #ffd9c2;color:#8a3a12;border-radius:11px;padding:11px 14px;font-size:13px;margin-bottom:16px}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(8,26,57,.55);display:none;align-items:center;justify-content:center;z-index:90;padding:20px}
+  .modal.show{display:flex}
+  .modal .box{background:#fff;border-radius:var(--radius);max-width:480px;width:100%;padding:22px}
+  .modal h3{font-family:var(--display);color:var(--navy);margin:0 0 12px}
+  .acct{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:14px}
+  .acct input{width:auto}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="hwrap">
+    <div class="brand">
+      <div class="mark">P</div>
+      <b>Patron <span>Social Studio</span></b>
+    </div>
+    <div class="hcontact">
+      <span class="status">
+        <span class="chip"><span class="dot" id="d-gem"></span> OpenAI</span>
+        <span class="chip"><span class="dot" id="d-pub"></span> Publer</span>
+      </span>
+      <button class="btn btn-ghost" id="openSettings" style="padding:8px 14px;font-size:13px">⚙ Settings</button>
+      <a href="https://www.patronaccounting.com" target="_blank">patronaccounting.com</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hwrap2">
+    <div class="eyebrow">7-Day Social Planner</div>
+    <h1>Turn one week into a <i>full plan</i> of on-brand posts.</h1>
+    <p class="sub">Pick your focus areas, generate a week of designed posts across every platform, review them right here, and schedule straight to Publer.</p>
+  </div>
+</section>
+
+<main>
+  <div id="setupBanner"></div>
+
+  <div class="card" id="configCard">
+    <div class="grid">
+      <div><label>Primary focus area</label><select id="bPrimary"></select></div>
+      <div><label>Secondary focus area</label><select id="bSecondary"></select></div>
+      <div><label>Generic focus area</label><select id="bGeneric"></select></div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div><label>Week start date</label><input type="date" id="bStart" /></div>
+      <div><label>Days to render</label>
+        <select id="bDays">
+          <option value="1">Day 1 only (quick test)</option>
+          <option value="1,2">Days 1-2</option>
+          <option value="3,4">Days 3-4</option>
+          <option value="5,6,7">Days 5-7</option>
+          <option value="">All 7 days (needs paid Render plan)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <label>Platforms</label>
+      <div class="platrow" id="bPlatforms"></div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btnBatch">Generate this week</button>
+      <label style="display:flex;align-items:center;gap:7px;font-weight:400;color:var(--muted);margin:0"><input type="checkbox" id="allowPreview" style="width:auto"> Preview without AI (placeholder content)</label>
+      <span class="note" id="bStatus"></span>
+    </div>
+  </div>
+
+  <div id="gallerySection" style="display:none">
+    <div class="section-title">Your week of posts</div>
+    <p class="note" id="galleryNote"></p>
+    <div class="daybar" id="dayBar"></div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+</main>
+
+<div class="modal" id="settingsModal">
+  <div class="box" style="max-width:540px">
+    <h3>Settings — API Keys</h3>
+    <p class="note">Keys are saved on the server and used for generation. They are never shown in full after saving. <b>On Render free tier the disk resets when the app sleeps/redeploys</b> — for permanence also add them as Render Environment variables.</p>
+    <div style="margin-top:10px">
+      <label>OpenAI API key</label>
+      <input type="text" id="setGemKey" placeholder="paste your OpenAI key (sk-...)" autocomplete="off">
+      <p class="note" id="setGemMasked"></p>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div><label>Text model</label><input type="text" id="setGemText" list="textModelList" placeholder="gpt-4o-mini (or Detect models)"><datalist id="textModelList"></datalist></div>
+      <div><label>Image model</label><input type="text" id="setGemImg" list="imgModelList" placeholder="gpt-image-1 (or Detect models)"><datalist id="imgModelList"></datalist></div>
+    </div>
+    <div style="margin-top:8px"><button class="btn btn-ghost" id="detectModels" style="padding:8px 14px;font-size:13px">Detect models for this key</button> <span class="note" id="detectResult"></span></div>
+    <div style="margin-top:14px">
+      <label>Publer API key</label>
+      <input type="text" id="setPubKey" placeholder="paste your Publer key" autocomplete="off">
+      <p class="note" id="setPubMasked"></p>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div><label>Publer workspace ID</label><input type="text" id="setPubWs" placeholder="workspace id"></div>
+      <div><label>Publer base URL</label><input type="text" id="setPubBase" placeholder="https://app.publer.com/api/v1"></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="setSave">Save keys</button>
+      <button class="btn btn-navy" id="setTest">Test OpenAI key</button>
+      <button class="btn btn-ghost" id="setClose">Close</button>
+    </div>
+    <div class="note" id="setResult" style="margin-top:10px"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="schedModal">
+  <div class="box">
+    <h3 id="schedTitle">Schedule to Publer</h3>
+    <div id="schedAccts"><div class="note">Loading connected accounts…</div></div>
+    <div id="schedWhenRow" style="margin-top:12px">
+      <label>When to publish</label>
+      <input type="datetime-local" id="schedWhen" />
+      <p class="note">Leave blank to send as a draft you can review in Publer.</p>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px">
+      <button class="btn btn-primary" id="schedGo">Send to Publer</button>
+      <button class="btn btn-ghost" id="schedCancel">Cancel</button>
+    </div>
+    <div class="note" id="schedResult" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=(s)=>document.querySelector(s);
+const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),3000);};
+const PLATFORMS=["instagram","linkedin","facebook","pinterest","twitter","gmb"];
+const PLABEL={instagram:"Instagram",linkedin:"LinkedIn",facebook:"Facebook",pinterest:"Pinterest",twitter:"Twitter/X",gmb:"GMB (x3 cities)"};
+const state={platforms:new Set(PLATFORMS),posts:[],accounts:[],activeDay:null,schedTarget:null,schedAutoPosts:null,batchId:null,me:null};
+
+async function health(){
+  try{const d=await (await fetch("/api/health")).json();
+    $("#d-gem").className="dot "+(d.configured.openai?"on":"off");
+    $("#d-pub").className="dot "+(d.configured.publer?"on":"off");
+    if(!d.configured.openai){$("#setupBanner").innerHTML='<div class="banner">No OpenAI key detected. Click <b>⚙ Settings</b> (top-right) to add your OpenAI API key (sk-...) — that\'s what produces real captions and photo backgrounds. Without it you can only run Preview mode.</div>';}else{$("#setupBanner").innerHTML="";}
+  }catch(e){}
+}
+
+async function initConfig(){
+  const d=new Date();const add=((8-d.getDay())%7)||7;d.setDate(d.getDate()+add);
+  $("#bStart").value=d.toISOString().slice(0,10);
+  const pr=$("#bPlatforms");pr.innerHTML="";
+  for(const p of PLATFORMS){
+    const b=document.createElement("div");b.className="platpick on";b.textContent=PLABEL[p];
+    b.onclick=()=>{if(state.platforms.has(p)){state.platforms.delete(p);b.classList.remove("on");}else{state.platforms.add(p);b.classList.add("on");}};
+    pr.appendChild(b);
+  }
+  try{
+    const j=await (await fetch("/api/batch/focus")).json();
+    if(j.ok){
+      const fill=(sel,ph)=>{const el=$(sel);el.innerHTML="";const o0=document.createElement("option");o0.value="";o0.textContent=ph;el.appendChild(o0);
+        for(const g of Object.keys(j.groups)){const og=document.createElement("optgroup");og.label=g;
+          for(const it of j.groups[g]){const o=document.createElement("option");o.value=it.key;o.textContent=it.label;og.appendChild(o);}el.appendChild(og);}};
+      fill("#bPrimary","— pick a primary service —");fill("#bSecondary","— optional —");fill("#bGeneric","— optional —");
+      $("#bPrimary").value="gst-registration";
+    }
+  }catch(e){}
+}
+
+async function runBatch(){
+  const platforms=[...state.platforms];
+  if(!platforms.length){toast("Pick at least one platform");return;}
+  const daysVal=$("#bDays").value;
+  const body={start:$("#bStart").value||undefined,primary:$("#bPrimary").value||"",secondary:$("#bSecondary").value||"",generic:$("#bGeneric").value||"",platforms,days:daysVal?daysVal.split(",").map(Number):undefined,allowPreview:$("#allowPreview").checked};
+  const btn=$("#btnBatch");btn.disabled=true;const old=btn.textContent;btn.innerHTML='<span class="spinner"></span>Generating…';
+  $("#bStatus").textContent="Building your posts on the server. This can take a minute.";
+  try{
+    const r=await fetch("/api/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(!r.ok||!j.ok){
+      if(j.error==="NO_OPENAI_KEY"){
+        $("#bStatus").textContent="No OpenAI key set. Open Settings to add it (or tick 'Preview without AI').";
+        openSettings();
+        return;
+      }
+      throw new Error(j.message||j.error||"Batch failed");
+    }
+    state.posts=j.posts;
+    state.batchId=j.batchId;
+    let msg=j.count+" posts generated"+(j.mock?" (PREVIEW mode — placeholder content)":"")+".";
+    if(j.genErrors)msg+=" ⚠ "+j.genErrors+" had an AI error (check Settings → Test OpenAI).";
+    $("#bStatus").textContent=msg;
+    renderGallery();
+    toast(j.mock?"Preview ready":"Week ready ✓");
+    $("#gallerySection").scrollIntoView({behavior:"smooth"});
+  }catch(e){
+    $("#bStatus").textContent="Error: "+e.message+(/memory|timeout|spin/i.test(e.message)?" (Try fewer days/platforms, or upgrade the Render plan.)":"");
+    toast("Generation failed");
+  }finally{btn.disabled=false;btn.textContent=old;}
+}
+
+function renderGallery(){
+  $("#gallerySection").style.display="block";
+  const days=[...new Set(state.posts.map(p=>p.day))].sort((a,b)=>a-b);
+  state.activeDay=days[0];
+  const bar=$("#dayBar");bar.innerHTML="";
+  for(const d of days){
+    const b=document.createElement("div");b.className="daybtn"+(d===state.activeDay?" on":"");b.textContent="Day "+d;
+    b.onclick=()=>{state.activeDay=d;[...bar.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");drawPosts();};
+    bar.appendChild(b);
+  }
+  $("#galleryNote").textContent="Each card is one post. Regenerate redoes that image + caption. Schedule sends it to Publer. Use Schedule Day to queue the whole day at once.";
+  drawPosts();
+}
+
+function drawPosts(){
+  const g=$("#gallery");g.innerHTML="";
+  const posts=state.posts.filter(p=>p.day===state.activeDay);
+  // Schedule Day bar
+  const dayActions=document.createElement("div");
+  dayActions.style.cssText="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px";
+  const allDays=[...new Set(state.posts.map(p=>p.day))].length;
+  dayActions.innerHTML=`<button class="btn btn-primary" id="schedDayBtn">Schedule Day ${state.activeDay} (${posts.length} posts)</button>`+
+    `<button class="btn btn-navy" id="schedWeekBtn">Schedule Whole Week (${state.posts.length} posts)</button>`+
+    `<span class="note">Auto-fills each post's date, time and account from the plan timetable.</span>`;
+  g.appendChild(dayActions);
+  dayActions.querySelector("#schedDayBtn").onclick=()=>openScheduleAuto(posts,"Day "+state.activeDay);
+  dayActions.querySelector("#schedWeekBtn").onclick=()=>openScheduleAuto(state.posts,"the whole week");
+
+  for(const p of posts){
+    const card=document.createElement("div");card.className="post";card.dataset.id=p.id;
+    const main=p.images[0];
+    let thumbs="";
+    if(p.isCarousel&&p.images.length>1){
+      thumbs='<div class="thumbs">'+p.images.map((u,i)=>`<img src="${u}" class="${i===0?'sel':''}" data-u="${u}">`).join("")+'</div>';
+    }
+    card.innerHTML=`
+      <div class="imgwrap">
+        <span class="pl">${p.platform}${p.city?' · '+p.city:''}</span>
+        ${p.isCarousel?'<span class="carbadge">CAROUSEL</span>':''}
+        <img class="mainimg" src="${main}">
+      </div>
+      ${thumbs}
+      <div class="body">
+        <div class="meta">${p.slotType?('<b>'+p.slotType+'</b> · '):''}${p.focus||''} · ${p.date||''}</div>
+        <div class="cap">${esc(p.caption||'')}</div>
+        <div class="row">
+          <button class="btn btn-ghost btnRegen">↻ Regenerate</button>
+          <button class="btn btn-navy btnSched">Schedule</button>
+        </div>
+      </div>`;
+    if(p.isCarousel&&p.images.length>1){
+      const mi=card.querySelector(".mainimg");
+      card.querySelectorAll(".thumbs img").forEach(t=>t.onclick=()=>{mi.src=t.dataset.u;card.querySelectorAll(".thumbs img").forEach(x=>x.classList.remove("sel"));t.classList.add("sel");});
+    }
+    card.querySelector(".btnRegen").onclick=()=>regenPost(p,card);
+    card.querySelector(".btnSched").onclick=()=>openSchedule(p);
+    g.appendChild(card);
+  }
+}
+
+// Regenerate a single post's image + caption
+async function regenPost(post,card){
+  const btn=card.querySelector(".btnRegen");btn.disabled=true;const old=btn.textContent;btn.innerHTML='<span class="spinner"></span>…';
+  try{
+    const r=await fetch("/api/batch/"+state.batchId+"/regenerate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({postId:post.id})});
+    const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||"Regenerate failed");
+    // update state + card in place
+    const idx=state.posts.findIndex(x=>x.id===post.id);if(idx>=0)state.posts[idx]=j.post;
+    const mi=card.querySelector(".mainimg");mi.src=j.post.images[0];
+    card.querySelector(".cap").textContent=j.post.caption||"";
+    // refresh carousel thumbs if any
+    const tw=card.querySelector(".thumbs");
+    if(tw&&j.post.images.length>1){tw.innerHTML=j.post.images.map((u,i)=>`<img src="${u}" class="${i===0?'sel':''}" data-u="${u}">`).join("");
+      tw.querySelectorAll("img").forEach(t=>t.onclick=()=>{mi.src=t.dataset.u;tw.querySelectorAll("img").forEach(x=>x.classList.remove("sel"));t.classList.add("sel");});}
+    toast("Regenerated ✓");
+  }catch(e){toast("Regenerate failed: "+e.message);}
+  finally{btn.disabled=false;btn.textContent=old;}
+}
+
+// ---- settings (API keys) ----
+async function loadSettings(){
+  try{
+    const j=await (await fetch("/api/settings")).json();
+    if(j.ok){
+      $("#setGemMasked").textContent=j.settings.OPENAI_API_KEY?("current: "+j.settings.OPENAI_API_KEY):"not set";
+      $("#setPubMasked").textContent=j.settings.PUBLER_API_KEY?("current: "+j.settings.PUBLER_API_KEY):"not set";
+      $("#setGemText").value=j.settings.OPENAI_TEXT_MODEL||"";
+      $("#setGemImg").value=j.settings.OPENAI_IMAGE_MODEL||"";
+      $("#setPubWs").value=j.settings.PUBLER_WORKSPACE_ID||"";
+      $("#setPubBase").value=j.settings.PUBLER_BASE||"";
+    }
+  }catch(e){}
+}
+function openSettings(){$("#settingsModal").classList.add("show");$("#setResult").textContent="";loadSettings();}
+$("#openSettings").addEventListener("click",openSettings);
+$("#setClose").addEventListener("click",()=>$("#settingsModal").classList.remove("show"));
+$("#setSave").addEventListener("click",async()=>{
+  const body={
+    OPENAI_API_KEY:$("#setGemKey").value.trim(),
+    OPENAI_TEXT_MODEL:$("#setGemText").value.trim(),
+    OPENAI_IMAGE_MODEL:$("#setGemImg").value.trim(),
+    PUBLER_API_KEY:$("#setPubKey").value.trim(),
+    PUBLER_WORKSPACE_ID:$("#setPubWs").value.trim(),
+    PUBLER_BASE:$("#setPubBase").value.trim(),
+  };
+  $("#setResult").textContent="Saving…";
+  try{
+    const j=await (await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+    // reflect the saved values immediately so the key doesn't look like it vanished
+    if(j.settings){
+      $("#setGemMasked").textContent=j.settings.OPENAI_API_KEY?("current: "+j.settings.OPENAI_API_KEY):"not set";
+      $("#setPubMasked").textContent=j.settings.PUBLER_API_KEY?("current: "+j.settings.PUBLER_API_KEY):"not set";
+    }
+    $("#setResult").textContent="Saved ✓  OpenAI "+(j.hasOpenAI?"✓":"✗")+" · Publer "+(j.hasPubler?"✓":"✗")+".  Now click 'Test OpenAI key'.";
+    $("#setGemKey").value="";$("#setPubKey").value="";
+    health();
+    toast("Keys saved ✓");
+  }catch(e){$("#setResult").textContent="Save failed: "+e.message;}
+});
+$("#detectModels").addEventListener("click",async()=>{
+  const k=$("#setGemKey").value.trim();
+  const p=new URLSearchParams();if(k)p.set("key",k);
+  const qs=p.toString()?("?"+p.toString()):"";
+  $("#detectResult").textContent="Detecting models for this key…";
+  try{
+    const j=await (await fetch("/api/settings/list-models"+qs)).json();
+    if(!j.ok)throw new Error(j.error||"failed");
+    $("#textModelList").innerHTML=(j.text||[]).map(m=>`<option value="${esc(m)}">`).join("");
+    $("#imgModelList").innerHTML=(j.image||[]).map(m=>`<option value="${esc(m)}">`).join("");
+    // auto-fill the detected default model only if the field is empty
+    if(!$("#setGemText").value&&j.defaultText)$("#setGemText").value=j.defaultText;
+    if(!$("#setGemImg").value&&j.defaultImage)$("#setGemImg").value=j.defaultImage;
+    $("#detectResult").textContent=`Provider: ${j.provider}. Found ${ (j.text||[]).length } text + ${ (j.image||[]).length } image models. Pick from the dropdowns.`;
+    if(!(j.image||[]).length)$("#detectResult").textContent+=" (No image model for this key — backgrounds will use the abstract fallback.)";
+  }catch(e){$("#detectResult").textContent="Couldn't list models: "+e.message;}
+});
+$("#setTest").addEventListener("click",async()=>{
+  $("#setResult").textContent="Testing OpenAI (text + image)…";
+  $("#setResult").style.whiteSpace="pre-wrap";
+  // test exactly what's typed in the box; if blank, the server uses the saved key
+  const qs=new URLSearchParams();
+  const k=$("#setGemKey").value.trim();if(k)qs.set("key",k);
+  const tm=$("#setGemText").value.trim();if(tm)qs.set("textModel",tm);
+  const im=$("#setGemImg").value.trim();if(im)qs.set("imageModel",im);
+  try{
+    const j=await (await fetch("/api/settings/test-openai?"+qs.toString())).json();
+    if(!j.ok){$("#setResult").textContent="✗ "+(j.error||"OpenAI test failed");return;}
+    let msg="Tested key: "+(j.tested||"(saved)")+" · provider: "+(j.provider||"?")+"\nText generation: "+(j.text?"✓ works":"✗ FAILED")+" · Image generation: "+(j.image?"✓ works":"✗ FAILED");
+    if(j.usingText||j.usingImage)msg+="\nUsing models: "+(j.usingText||"-")+" (text), "+(j.usingImage||"-")+" (image)";
+    if(j.warn)msg="⚠ "+j.warn+"\n\n"+msg;
+    if(j.text&&j.image)msg+="\n\n✓ All good! Save the key, then generate.";
+    if(!j.image&&j.text)msg+="\nImage model not enabled — backgrounds use the abstract fallback. (gpt-image-1 needs a verified OpenAI org; or try dall-e-3 via Detect models.)";
+    if(j.errors&&(j.errors.text||j.errors.image)){
+      const d=(j.errors.text||"")+" "+(j.errors.image||"");
+      if(/quota|insufficient_quota|exceeded your current quota|billing/i.test(d))msg+="\n\n⚠ Your OpenAI account has no available credit/quota. Add a payment method or credits at platform.openai.com → Billing, then try again.";
+      else if(/invalid api key|incorrect api key|401/i.test(d))msg+="\n\n⚠ This OpenAI key is invalid or revoked. Create a fresh key at platform.openai.com/api-keys.";
+      else if(/must be verified|verify|organization/i.test(d))msg+="\n\n⚠ Image generation (gpt-image-1) needs a VERIFIED OpenAI organization. Text still works; verify your org at platform.openai.com/settings, or use dall-e-3.";
+      else msg+="\nDetails: "+d;
+    }
+    $("#setResult").textContent=msg;
+  }catch(e){$("#setResult").textContent="Test failed: "+e.message;}
+});
+async function loadAccounts(){
+  if(!state.accounts.length){
+    try{const j=await (await fetch("/api/publer/accounts")).json();state.accounts=j.ok?j.accounts:[];}catch(e){state.accounts=[];}
+  }
+  return state.accounts;
+}
+// map a post to a connected Publer account.
+// For GMB, match the specific CITY profile by an address fragment in its name:
+//   Pune     -> "RTC Silver" / "Sai Satyam" / "Wagholi"
+//   Gurugram -> "Pioneer" / "Golf Course" / "Sector 62"
+//   Mumbai   -> "Rajshila" / "Marine Lines" / "JSS Road"
+//   Delhi    -> (no profile connected) -> skipped
+const GMB_CITY_HINTS={
+  pune:["rtc silver","sai satyam","wagholi"],
+  gurugram:["pioneer","golf course","sector 62"],
+  mumbai:["rajshila","marine lines","jss road"],
+};
+function accountForPost(post){
+  if(post.platform==="gmb"){
+    const hints=GMB_CITY_HINTS[(post.city||"").toLowerCase()]||[];
+    if(!hints.length)return null; // e.g. delhi: no profile -> skip
+    return state.accounts.find(a=>{
+      const n=(a.name||"").toLowerCase();const prov=(a.provider||"").toLowerCase();
+      return (prov.includes("google")||prov.includes("gmb"))&&hints.some(h=>n.includes(h));
+    })||null;
+  }
+  const want={instagram:"instagram",facebook:"facebook",linkedin:"linkedin",twitter:"twitter",pinterest:"pinterest"}[post.platform]||post.platform;
+  return state.accounts.find(a=>(a.provider||"").toLowerCase().includes(want))||null;
+}
+// kept for the single-post manual modal (matches by platform only)
+function accountForPlatform(platform){
+  const want={instagram:"instagram",facebook:"facebook",linkedin:"linkedin",twitter:"twitter",pinterest:"pinterest",gmb:"google"}[platform]||platform;
+  return state.accounts.find(a=>(a.provider||"").toLowerCase().includes(want))||null;
+}
+// single-post manual schedule (pick account + time yourself)
+async function openSchedule(post){
+  state.schedTarget=post;state.schedAutoPosts=null;
+  $("#schedTitle").textContent="Schedule this post";
+  $("#schedModal").classList.add("show");$("#schedResult").textContent="";
+  await loadAccounts();
+  const wrap=$("#schedAccts");
+  if(!state.accounts.length){wrap.innerHTML='<div class="note">No Publer accounts found. Check Settings → Publer key/workspace.</div>';return;}
+  const match=accountForPlatform(post.platform);
+  wrap.innerHTML='<p class="note">Pick the account to post to:</p>'+state.accounts.map(a=>`<label class="acct"><input type="checkbox" value="${a.id}" data-prov="${esc(a.provider||'')}" ${match&&match.id===a.id?'checked':''}> ${esc(a.name||a.id)} <span class="note">(${esc(a.provider||'')})</span></label>`).join("");
+  $("#schedWhenRow").style.display="block";
+  $("#schedWhen").value=(post.scheduledAt||"").slice(0,16); // prefill with the timetable time
+}
+// AUTO schedule: each post → its matching account + its timetable time
+async function openScheduleAuto(posts,label){
+  state.schedAutoPosts=posts;state.schedTarget=null;
+  $("#schedTitle").textContent="Schedule "+label+" ("+posts.length+" posts)";
+  $("#schedModal").classList.add("show");$("#schedResult").textContent="";
+  await loadAccounts();
+  const wrap=$("#schedAccts");
+  if(!state.accounts.length){wrap.innerHTML='<div class="note">No Publer accounts found. Check Settings → Publer key/workspace.</div>';return;}
+  // show which post-group maps to which account; warn about any missing.
+  // group by platform, but GMB is grouped by city (3 separate profiles).
+  const groups={};
+  for(const p of posts){
+    const key=p.platform==="gmb"?("gmb · "+(p.city||"")):p.platform;
+    if(!groups[key])groups[key]={sample:p,count:0};
+    groups[key].count++;
+  }
+  let rows=Object.keys(groups).map(key=>{
+    const a=accountForPost(groups[key].sample);
+    return `<div class="acct">${esc(key)} (${groups[key].count}) → ${a?('<b>'+esc(a.name||a.id)+'</b>'):'<span style="color:#d9534f">no connected account — will be skipped</span>'}</div>`;
+  }).join("");
+  wrap.innerHTML='<p class="note">Each post is auto-assigned to its account and its plan time:</p>'+rows;
+  $("#schedWhenRow").style.display="none"; // times come from the plan
+}
+$("#schedCancel").onclick=()=>$("#schedModal").classList.remove("show");
+$("#schedGo").onclick=async()=>{
+  // AUTO mode
+  if(state.schedAutoPosts){
+    const targets=state.schedAutoPosts;
+    let ok=0,fail=0,skip=0;const errs=[];
+    $("#schedResult").textContent="Scheduling "+targets.length+" posts…";
+    for(const post of targets){
+      const acct=accountForPost(post);
+      if(!acct){skip++;continue;}
+      try{
+        const imageUrl=location.origin+post.images[0].split("?")[0];
+        const r=await fetch("/api/publer/schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({accountId:acct.id,provider:acct.provider,text:post.caption||"",imageUrl,scheduledAt:post.scheduledAt||null})});
+        const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||"fail");ok++;
+      }catch(e){fail++;if(errs.length<2)errs.push(e.message);}
+      $("#schedResult").textContent="Scheduling… "+(ok+fail+skip)+"/"+targets.length;
+    }
+    let msg="Done. "+ok+" scheduled"+(fail?(", "+fail+" failed"):"")+(skip?(", "+skip+" skipped (no account)"):"")+".";
+    if(errs.length)msg+="\nError: "+errs[0];
+    $("#schedResult").style.whiteSpace="pre-wrap";
+    $("#schedResult").textContent=msg;
+    toast(ok+" scheduled ✓");
+    return;
+  }
+  // SINGLE mode
+  const post=state.schedTarget;if(!post)return;
+  const checked=[...document.querySelectorAll("#schedAccts input:checked")];
+  if(!checked.length){toast("Pick at least one account");return;}
+  const when=$("#schedWhen").value;
+  $("#schedResult").textContent="Sending…";
+  let ok=0,fail=0;
+  for(const c of checked){
+    try{
+      const imageUrl=location.origin+post.images[0].split("?")[0];
+      const r=await fetch("/api/publer/schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({accountId:c.value,provider:c.dataset.prov,text:post.caption||"",imageUrl,scheduledAt:when||post.scheduledAt||null})});
+      const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||"fail");ok++;
+    }catch(e){fail++;}
+  }
+  $("#schedResult").textContent="Done. "+ok+" scheduled"+(fail?(", "+fail+" failed"):"")+".";
+  toast(ok+" scheduled ✓");
+};
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+$("#btnBatch").addEventListener("click",runBatch);
+health();
+initConfig();
+</script>
+</body>
+</html>
