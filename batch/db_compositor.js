@@ -44,13 +44,29 @@ function catalog(){ if(_cat)return _cat;
   _cat={chars:r(CHAR_DIR),bgs:r(BG_DIR),ills,
         vec:ills.filter(f=>f.startsWith('V_')), ico:ills.filter(f=>f.startsWith('I_')), geo:ills.filter(f=>f.startsWith('G_'))};
   return _cat; }
-function pickChar(intent,seed){ const chars=catalog().chars; const keys=MOOD[moodForIntent(intent)]||MOOD.neutral;
-  let pool=chars.filter(f=>keys.some(k=>f.toLowerCase().includes(k.toLowerCase()))); if(!pool.length)pool=chars;
-  return pool[seed%pool.length]; }
-// intent for pose = the post's own headline tone (falls back to spec.intent)
-function intentForPost(spec){ return [spec.headline, spec.eyebrow, spec.intent].filter(Boolean).join(' '); }
-function pickBg(seed){ const bgs=catalog().bgs; return bgs[seed%bgs.length]; }
-function pickFrom(arr,seed){ return arr.length?arr[seed%arr.length]:null; }
+// ---- VARIATION ENGINE ----------------------------------------------------
+// Each post gets a unique integer `vseed`. We derive INDEPENDENT indices for
+// background, character person, pose, style and illustration using different
+// prime strides so they don't move in lockstep (which caused identical posts).
+const PRIME = { bg:7, person:3, pose:5, style:1, ill:11, scheme:1 };
+function idx(vseed, stride, len){ return len ? ((vseed*stride) % len + len) % len : 0; }
+
+function pickChar(intent, vseed){
+  const chars = catalog().chars;
+  const keys = MOOD[moodForIntent(intent)] || MOOD.neutral;
+  // pool of poses that match the mood
+  let pool = chars.filter(f => keys.some(k => f.toLowerCase().includes(k.toLowerCase())));
+  if (!pool.length) pool = chars;
+  // vary BOTH which person (CHAR_1..5) and which matching pose, independently
+  // group pool by person
+  const persons = [...new Set(pool.map(f => f.split('__')[0]))];
+  const person = persons[idx(vseed, PRIME.person, persons.length)];
+  const personPool = pool.filter(f => f.startsWith(person + '__'));
+  return personPool[idx(vseed, PRIME.pose, personPool.length)];
+}
+function pickBg(vseed){ const bgs = catalog().bgs; return bgs[idx(vseed, PRIME.bg, bgs.length)]; }
+function pickVec(vseed){ const v = catalog().vec; return v.length ? v[idx(vseed, PRIME.ill, v.length)] : null; }
+function pickFrom(arr, vseed){ return arr.length ? arr[idx(vseed, PRIME.ill, arr.length)] : null; }
 
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function drawCover(ctx,img,dx,dy,dw,dh){const ir=img.width/img.height,dr=dw/dh;let sw,sh,sx,sy;
@@ -77,20 +93,24 @@ function solidBg(ctx,w,h,scheme,seed){
 }
 
 // chooses a style if not explicitly set, rotating evenly using seed
-function resolveStyle(spec){
+// intent for pose = the post's own headline tone (falls back to spec.intent)
+function intentForPost(spec){ return [spec.headline, spec.eyebrow, spec.intent].filter(Boolean).join(' '); }
+
+function resolveStyle(spec, vseed){
   if (spec.style && STYLES.includes(spec.style)) return spec.style;
   if (spec.carousel) return 'human_office'; // carousels keep the photo look by default
   const allow = spec.allowStyles && spec.allowStyles.length ? spec.allowStyles : STYLES;
-  return allow[(spec.seed||0) % allow.length];
+  return allow[idx(vseed, PRIME.style, allow.length)];
 }
 
 async function renderPost(spec,size){
   ensureFonts();
   const w=size.w,h=size.h;
   const landscape = w > h*1.2;
-  const scheme = SCHEMES[(spec.schemeIdx||0)%SCHEMES.length];
-  const seed = spec.seed||0;
-  const style = resolveStyle(spec);
+  // unique, well-distributed per-post seed (the fix for "all images look the same")
+  const vseed = Math.abs((spec.seed||0) * 2654435761 % 1000000) || (spec.seed||0);
+  const scheme = SCHEMES[(spec.schemeIdx!=null ? spec.schemeIdx : idx(vseed, PRIME.scheme, SCHEMES.length)) % SCHEMES.length];
+  const style = resolveStyle(spec, vseed);
   const canvas=createCanvas(w,h); const ctx=canvas.getContext('2d');
   const pad=Math.round(w*0.05);
 
@@ -106,12 +126,12 @@ async function renderPost(spec,size){
 
   // ---- BACKGROUND ----
   if (style==='human_office'){
-    const bg=await loadImage(path.join(BG_DIR,pickBg(seed))); drawCover(ctx,bg,0,0,w,h);
+    const bg=await loadImage(path.join(BG_DIR,pickBg(vseed))); drawCover(ctx,bg,0,0,w,h);
   } else {
-    solidBg(ctx,w,h,scheme,seed);
+    solidBg(ctx,w,h,scheme,vseed);
   }
 
-  const anchorRight = (seed % 2 === 0); // alternate left/right by seed for variety
+  const anchorRight = (vseed % 2 === 0); // alternate left/right by seed for variety
 
   // ---- SCRIM (drawn BEFORE the character so the figure stays bright) ----
   if (style==='human_office'){
@@ -133,13 +153,14 @@ async function renderPost(spec,size){
   }
 
   // ---- FOREGROUND ART (bigger, side-anchored, fills the zone) ----
+  let charTopY = null, charLeft = null, charRight = null; // track figure bounds for text exclusion
   if (style==='human_office' || style==='human_solid'){
-    const ch=await loadImage(path.join(CHAR_DIR, spec.charFile || pickChar(intentForPost(spec),seed)));
+    const ch=await loadImage(path.join(CHAR_DIR, spec.charFile || pickChar(intentForPost(spec),vseed)));
     const tb=trimBox(ch);
     let dh, dw, dx, dy;
     if (!landscape){
-      dh = h * 0.82; dw = dh*(tb.w/tb.h);
-      const maxW = w*0.66; if(dw>maxW){dw=maxW;dh=dw*(tb.h/tb.w);}
+      dh = h * 0.74; dw = dh*(tb.w/tb.h);                 // slightly shorter so head clears text band
+      const maxW = w*0.62; if(dw>maxW){dw=maxW;dh=dw*(tb.h/tb.w);}
       dx = anchorRight ? (w - dw - pad*0.1) : (-dw*0.04 + pad*0.1);
       dy = h - dh;
     } else {
@@ -147,11 +168,12 @@ async function renderPost(spec,size){
       const maxW = artZone.w*1.04; if(dw>maxW){dw=maxW;dh=dw*(tb.h/tb.w);}
       dx = w - dw + dw*0.02; dy = h - dh;
     }
+    charTopY = dy; charLeft = dx; charRight = dx + dw;
     ctx.save();ctx.globalAlpha=0.16;ctx.fillStyle='#000';
     ctx.beginPath();ctx.ellipse(dx+dw*0.5,h-12,dw*0.32,18,0,0,7);ctx.fill();ctx.restore();
     ctx.drawImage(ch,tb.l,tb.t,tb.w,tb.h,dx,dy,dw,dh);
   } else if (style==='illustration'){
-    const ill=await loadImage(path.join(ILL_DIR, pickFrom(catalog().vec,seed)));
+    const ill=await loadImage(path.join(ILL_DIR, pickVec(vseed)));
     const tb=trimBox(ill);
     let dw, dh;
     if (!landscape){
@@ -172,19 +194,14 @@ async function renderPost(spec,size){
     ctx.drawImage(logo,pad,pad*0.8,lw,lh); yCursor=pad*0.8+lh+pad*0.5;
   }catch(e){}
 
-  // text starts a bit lower (per feedback) and, on portrait human styles, keeps to the
-  // side OPPOSITE the character so the larger figure never overlaps the text.
+  // text occupies the top band, full width; the character is grounded lower so its
+  // head clears this band. Pills additionally stop before the figure's top edge.
   const humanPortrait = (!landscape && (style==='human_office'||style==='human_solid'));
-  if (humanPortrait) yCursor += pad*0.6; // push text down
-  const tx = (humanPortrait && anchorRight===false) ? Math.round(w*0.40) : pad; // char left -> text right
+  if (humanPortrait) yCursor += pad*0.4;
+  const tx = pad;
   let textColRight;
-  if (humanPortrait){
-    textColRight = anchorRight ? Math.round(w*0.60) : (w-pad); // char right -> text confined to left 60%
-  } else if (landscape || style==='text_icon'){
-    textColRight = (style==='text_icon') ? (w-pad) : (textZone.w-pad*0.6);
-  } else {
-    textColRight = w-pad;
-  }
+  if (landscape && style!=='text_icon'){ textColRight = textZone.w - pad*0.6; }
+  else { textColRight = w - pad; }
   const textMaxW = textColRight - tx;
 
   if(spec.eyebrow){ ctx.font='600 '+Math.round(w*0.024)+'px PatronMedium';ctx.fillStyle=scheme.pill;ctx.textBaseline='top';
@@ -203,14 +220,39 @@ async function renderPost(spec,size){
 
   const pills=[].concat(spec.bullets||[]); if(spec.dueText)pills.push(spec.dueText);
   ctx.font='600 '+Math.round(w*0.024)+'px PatronMedium';
-  const zoneBottom = (style==='text_icon') ? (h-pad) : (landscape ? (h-pad) : (textZone.y+textZone.h-pad*0.4));
-  for(const p of pills){ const t=String(p);const tw=ctx.measureText(t).width;
-    const ph=Math.round(w*0.024)+18, pw=Math.min(tw+34,textMaxW);
-    if(yCursor+ph>zoneBottom) break;
-    ctx.fillStyle='rgba(255,255,255,0.13)';rr(ctx,tx,yCursor,pw,ph,ph/2);ctx.fill();
-    ctx.fillStyle=scheme.pill;ctx.beginPath();ctx.arc(tx+16,yCursor+ph/2,5,0,7);ctx.fill();
-    ctx.fillStyle=C.white;ctx.textBaseline='middle';ctx.fillText(t,tx+30,yCursor+ph/2+1);ctx.textBaseline='top';
-    yCursor+=ph+11; }
+  const ph=Math.round(w*0.024)+18;
+
+  if (charTopY != null && !landscape){
+    // HUMAN PORTRAIT: pills go in the empty navy gap BESIDE the character's torso,
+    // on the side opposite the figure. Vertically centered in the lower band.
+    const gapIsLeft = anchorRight;                 // char right -> gap on left
+    const gapLeft  = gapIsLeft ? pad : (charRight + pad*0.4);
+    const gapRight = gapIsLeft ? (charLeft - pad*0.4) : (w - pad);
+    const gapW = Math.max(0, gapRight - gapLeft);
+    // start pills a bit below the headline band, centered in the torso zone
+    let py = Math.max(yCursor + pad*0.2, h*0.46);
+    const px = gapLeft;
+    for(const p of pills){
+      const t=String(p); const tw=ctx.measureText(t).width;
+      const pw=Math.min(tw+34, gapW);
+      if (pw < 80) break;                          // gap too narrow, skip rest
+      if (py+ph > h-pad) break;
+      ctx.fillStyle='rgba(11,33,71,0.78)';rr(ctx,px,py,pw,ph,ph/2);ctx.fill();   // solid-ish so it reads over bg
+      ctx.fillStyle=scheme.pill;ctx.beginPath();ctx.arc(px+16,py+ph/2,5,0,7);ctx.fill();
+      ctx.fillStyle=C.white;ctx.textBaseline='middle';ctx.fillText(t,px+30,py+ph/2+1);ctx.textBaseline='top';
+      py+=ph+11;
+    }
+  } else {
+    // non-human (illustration/text) or landscape: pills stack under the headline as before
+    let zoneBottom = (charTopY!=null) ? (charTopY - pad*0.5) : (landscape ? (h-pad) : (textZone.y+textZone.h-pad*0.4));
+    for(const p of pills){ const t=String(p);const tw=ctx.measureText(t).width;
+      const pw=Math.min(tw+34,textMaxW);
+      if(yCursor+ph>zoneBottom) break;
+      ctx.fillStyle='rgba(255,255,255,0.13)';rr(ctx,tx,yCursor,pw,ph,ph/2);ctx.fill();
+      ctx.fillStyle=scheme.pill;ctx.beginPath();ctx.arc(tx+16,yCursor+ph/2,5,0,7);ctx.fill();
+      ctx.fillStyle=C.white;ctx.textBaseline='middle';ctx.fillText(t,tx+30,yCursor+ph/2+1);ctx.textBaseline='top';
+      yCursor+=ph+11; }
+  }
 
   if(spec.page){ const txt=String(spec.page.i).padStart(2,'0')+'/'+String(spec.page.n).padStart(2,'0');
     ctx.font='700 '+Math.round(w*0.028)+'px PatronDisplay';ctx.textAlign='right';
