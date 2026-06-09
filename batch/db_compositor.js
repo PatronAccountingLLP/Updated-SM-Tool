@@ -126,7 +126,7 @@ async function renderPost(spec,size){
 
   // ---- BACKGROUND ----
   if (style==='human_office'){
-    const bg=await loadImage(path.join(BG_DIR,pickBg(vseed))); drawCover(ctx,bg,0,0,w,h);
+    const bgFile = spec.bgFile || pickBg(vseed); const bg=await loadImage(path.join(BG_DIR,bgFile)); drawCover(ctx,bg,0,0,w,h);
   } else {
     solidBg(ctx,w,h,scheme,vseed);
   }
