@@ -25,7 +25,13 @@ const DB = require('./db_compositor');
 const { createRotation } = require('./rotation');
 let _rotation = null;
 function rotation() {
-  if (!_rotation) _rotation = createRotation(DB.catalog().chars, DB.catalog().bgs);
+  if (!_rotation) {
+    const c = DB.catalog();
+    _rotation = createRotation({
+      chars: c.chars, backgrounds: c.bgs,
+      decor: c.decor || [], scenes: c.scenes || [], icons: c.icons || [],
+    });
+  }
   return _rotation;
 }
 
@@ -296,15 +302,32 @@ async function renderOnePost(post, outDir, urlBase, opts) {
 
   let files = [];
   if (post.isCarousel && data.carousel) {
-    // Carousel: render cover + slides + close from the database compositor.
+    // Carousel: ONE theme for the whole deck — single scheme, single background,
+    // and the SAME person across all slides (only their pose changes per slide).
     const slides = [];
     const car = data.carousel;
     const total = 1 + (car.slides ? car.slides.length : 0) + (car.close ? 1 : 0);
+    const deckScheme = post.day % 3;
+    const cat = DB.catalog();
+    const deckBg = cat.bgs.length ? cat.bgs[(post.day*3) % cat.bgs.length] : undefined;
+    // pick one person (CHAR_n) for the whole deck
+    const persons = [...new Set(cat.chars.map(f => f.split('__')[0]))];
+    const deckPerson = persons.length ? persons[(post.day) % persons.length] : null;
+    const poseFor = (intent) => {
+      // choose a pose for this person that matches the slide's mood
+      const sel = rotation().select(intent || post.slotIntent || '');
+      const want = sel.character ? sel.character.split('__').pop() : null;
+      // find same fragment on the deck's person; else any pose of that person
+      let pool = cat.chars.filter(f => f.startsWith(deckPerson + '__'));
+      if (want){ const m = pool.find(f => f.endsWith(want)); if (m) return m; }
+      return pool.length ? pool[Math.floor(Math.random()*pool.length)] : (sel.character || undefined);
+    };
     let idx = 1;
     const mk = (b, intent) => ({
       eyebrow: b.eyebrow || '', headline: [b.headline, b.accent].filter(Boolean).join(' ') || b.headline || '',
-      bullets: b.bullets || [], intent: intent || post.slotIntent || '', schemeIdx: post.day % 3,
+      bullets: b.bullets || [], intent: intent || post.slotIntent || '', schemeIdx: deckScheme,
       carousel: true, seed: post.day*7 + idx,
+      style: 'human_office', bgFile: deckBg, charFile: poseFor(intent || post.slotIntent),
     });
     if (car.cover) slides.push(Object.assign(mk(car.cover), { page:{i:idx, n:total} }));
     (car.slides||[]).forEach(s => { idx++; slides.push(Object.assign(mk(s), { page:{i:idx, n:total} })); });
@@ -320,10 +343,16 @@ async function renderOnePost(post, outDir, urlBase, opts) {
     const title = [block.headline, block.headline_accent, block.eyebrow, (post.focus && post.focus.label)].filter(Boolean).join(' ');
     const sel = rotation().select(title);
     const spec = toDbSpec(block, post, opts);
-    spec.style = sel.style || spec.style;
-    spec.bgFile = sel.background || undefined;
-    spec.charFile = sel.character || undefined;
     spec.intent = sel.intent || spec.intent;
+    if (sel.mode === 'illustration') {
+      spec.style = 'illustration';
+      spec.sceneFile = sel.scene || undefined;
+    } else {
+      spec.style = 'human_office';
+      spec.bgFile = sel.background || undefined;
+      spec.charFile = sel.character || undefined;
+      spec.anchor = sel.anchor || undefined;   // pointing-aware placement
+    }
     const buf = await DB.renderPost(spec, size);
     const fn = path.join(dayDir, `${post.id}.png`);
     fs.writeFileSync(fn, buf); files.push(fn);
