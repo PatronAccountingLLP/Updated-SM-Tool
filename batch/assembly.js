@@ -42,7 +42,8 @@ function toDbSpec(block, post, opts) {
   const bullets = block.bullets || block.points || (block.checklist || []);
   return {
     eyebrow: block.eyebrow || block.kicker || (post.focus && post.focus.label) || '',
-    headline: [block.headline, block.headline_accent].filter(Boolean).join(' ') || block.headline || '',
+    headline: block.headline || '',
+    accent: block.headline_accent || '',
     bullets: Array.isArray(bullets) ? bullets.slice(0,4) : [],
     dueText: post.deadline ? ('Due ' + post.deadline.house) : (block.cta || ''),
     intent: post.slotIntent || '',
@@ -324,7 +325,7 @@ async function renderOnePost(post, outDir, urlBase, opts) {
     };
     let idx = 1;
     const mk = (b, intent) => ({
-      eyebrow: b.eyebrow || '', headline: [b.headline, b.accent].filter(Boolean).join(' ') || b.headline || '',
+      eyebrow: b.eyebrow || '', headline: b.headline || '', accent: b.accent || '',
       bullets: b.bullets || [], intent: intent || post.slotIntent || '', schemeIdx: deckScheme,
       carousel: true, seed: post.day*7 + idx,
       style: 'human_office', bgFile: deckBg, charFile: poseFor(intent || post.slotIntent),
