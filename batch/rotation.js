@@ -1,9 +1,4 @@
-// rotation.js — title-aware, mood-matched image selection with in-memory uniqueness.
-// Ported from the Redis rotation-engine, but state is held in-process (no Redis).
-// Suitable for batch generation in a single service. Uniqueness holds within a run;
-// it resets on process restart (fine for weekly batches). Same honest flags surfaced.
-
-// ---- Title analysis (keyword classifier, offline) --------------------------
+// rotation.js — title-aware rotation, TWO modes, tiered asset layers, in-memory uniqueness (no Redis).
 const INTENT_KEYWORDS = {
   alarm: ["due","deadline","notice","penalty","late","last date","alert","missed",
           "overdue","fine","warning","urgent","expiry","expire","reminder","act now",
@@ -28,36 +23,42 @@ function analyseTitle(rawTitle){
     scores[intent] = kws.reduce((n,kw)=>n+countKeyword(t,kw),0); total += scores[intent];
   }
   if (total === 0) return { intent:"explain", matched:false, scores };
-  const priority = ["alarm","authority","positive","explain"]; // urgency wins ties
+  const priority = ["alarm","authority","positive","explain"];
   let best="explain", bestScore=-1;
   for (const intent of priority){ if (scores[intent] > bestScore){ best=intent; bestScore=scores[intent]; } }
   return { intent:best, matched:true, scores };
 }
-
-// ---- Character mood buckets (real filenames; pose is encoded in the name) ----
-// These are pose-name fragments matched against CHAR_{n}__NN_PoseName.png files.
 const BUCKET_POSES = {
   alarm:     ["Frozen_Shock","Empty_Wallet","Nail_Biting","Collar_Tug","Shocked_Tax_Bill",
-              "Drowning_In_Paperwork","Hands_On_Head","Panic_Phone","Shocked","Worried_Reading","Stop_Caution"],
+              "Drowning_In_Paperwork","Hands_On_Head","Panic_Phone","Shocked","Worried_Reading",
+              "Stop_Caution","Facepalm_Regret"],
   authority: ["Confident_Arms_Crossed","Confident_Boss","Confident_CEO","Pointing_At_Camera",
               "Hand_On_Hip_Confident","Arms_Crossed_Confident"],
   positive:  ["OK_Sign","Thumbs_Up","Double_Thumbs_Up","Waving_Hello","Excited","Relieved"],
-  explain:   ["Both_Hands_Presenting","Questioning","Facepalm_Regret","Thinking","Presenting_Product",
-              "Holding_Phone","Finger_To_Lips","Pointing_Right","Holding_Documents","Pointing_Left",
+  explain:   ["Both_Hands_Presenting","Questioning","Thinking","Presenting_Product",
+              "Holding_Phone","Pointing_Right","Holding_Documents","Pointing_Left",
               "Pointing_Up","Counting_Fingers","Explainer","Explaining"],
 };
-const STYLE_POOL = ["human_office","human_solid","illustration"];
-
-// ---- In-memory uniqueness: a "used" set per dimension that refills when empty ----
+const ICONS_BY_INTENT = {
+  explain:   [3,4,7,8,9,12,13,14,15,17,18,22,23,30],
+  authority: [1,5,6,10,11,16,19,20,21,24,25],
+  positive:  [2],
+  neutral:   [26,27,28,29],
+};
+function readablePose(charFile){
+  const stem = String(charFile).replace(/\.png$/i,"").split("__").pop();
+  const parts = stem.split("_"); if (/^\d+$/.test(parts[0])) parts.shift();
+  return parts.join(" ");
+}
 function makeUsedTracker(){
-  const used = {}; // dim -> Set of used items
+  const used = {};
   return {
     claim(dim, universe){
       if (!universe || !universe.length) return { item:null, reused:false };
       if (!used[dim]) used[dim] = new Set();
       let avail = universe.filter(x => !used[dim].has(x));
       let reused = false;
-      if (!avail.length){ used[dim] = new Set(); avail = universe.slice(); reused = true; } // refill
+      if (!avail.length){ used[dim] = new Set(); avail = universe.slice(); reused = true; }
       const item = avail[Math.floor(Math.random()*avail.length)];
       used[dim].add(item);
       return { item, reused };
@@ -65,46 +66,48 @@ function makeUsedTracker(){
     reset(){ for (const k of Object.keys(used)) delete used[k]; },
   };
 }
-
-// poseFragment -> readable label, e.g. "Panic_Phone_Due_Alert" -> "Panic Phone Due Alert"
-function readablePose(charFile){
-  const stem = String(charFile).replace(/\.png$/i,"").split("__").pop();
-  const parts = stem.split("_"); if (/^\d+$/.test(parts[0])) parts.shift();
-  return parts.join(" ");
-}
-
-// Build a RotationEngine bound to the actual character files available in the catalog.
-// `catalogChars` = array of filenames like "CHAR_2__10_Shocked.png".
-function createRotation(catalogChars, backgrounds){
+function createRotation(pools){
   const tracker = makeUsedTracker();
-  // map each mood bucket to the real character files that match its pose fragments
+  let modeFlip = 0;
   const charsByIntent = {};
   for (const [intent, frags] of Object.entries(BUCKET_POSES)){
-    charsByIntent[intent] = (catalogChars||[]).filter(f =>
+    charsByIntent[intent] = (pools.chars||[]).filter(f =>
       frags.some(fr => f.toLowerCase().includes(fr.toLowerCase())));
-    if (!charsByIntent[intent].length) charsByIntent[intent] = (catalogChars||[]).slice(); // safety
+    if (!charsByIntent[intent].length) charsByIntent[intent] = (pools.chars||[]).slice();
+  }
+  const iconsByIntent = {};
+  for (const [intent, nums] of Object.entries(ICONS_BY_INTENT)){
+    iconsByIntent[intent] = nums.map(n=>`${n}.png`).filter(f => (pools.icons||[]).includes(f));
   }
   return {
     analyse: analyseTitle,
-    // title -> full selection spec (character, background, style, pose, flags)
-    select(title){
+    select(title, opts={}){
       const a = analyseTitle(title);
       const intent = a.intent;
-      const style = tracker.claim("style", STYLE_POOL);
-      const bg    = tracker.claim("bg", backgrounds||[]);
-      const ch    = tracker.claim("char:"+intent, charsByIntent[intent]||[]);
-      return {
-        intent,
-        analysisMatched: a.matched,
-        style: style.item,
-        background: bg.item,
-        character: ch.item,
-        expressionPose: ch.item ? readablePose(ch.item) : null,
-        flags: { characterPoolReused: ch.reused, styleReused: style.reused, bgReused: bg.reused },
-      };
+      let mode = opts.mode;
+      if (!mode){ modeFlip = (modeFlip+1)%4; mode = (modeFlip===0) ? "illustration" : "character"; }
+      const out = { intent, analysisMatched: a.matched, mode, flags:{} };
+      if (mode === "illustration"){
+        const scene = tracker.claim("scene", pools.scenes||[]);
+        out.scene = scene.item; out.flags.scenePoolReused = scene.reused;
+        return out;
+      }
+      const bg = tracker.claim("bg", pools.backgrounds||[]);
+      const ch = tracker.claim("char:"+intent, charsByIntent[intent]||[]);
+      out.background = bg.item;
+      out.character = ch.item;
+      out.expressionPose = ch.item ? readablePose(ch.item) : null;
+      out.flags.backgroundPoolReused = bg.reused;
+      out.flags.characterPoolReused = ch.reused;
+      // anchor side derived from facing/pointing so the character points INWARD toward the text:
+      //   points LEFT  -> place on RIGHT   |   points RIGHT -> place on LEFT
+      const cf = (ch.item||'').toLowerCase();
+      if (/pointing_left/.test(cf)) out.anchor = 'right';
+      else if (/pointing_right/.test(cf)) out.anchor = 'left';
+      else out.anchor = null; // let renderer alternate for non-directional poses
+      return out;
     },
     reset(){ tracker.reset(); },
   };
 }
-
 module.exports = { createRotation, analyseTitle };
