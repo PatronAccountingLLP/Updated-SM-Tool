@@ -21,6 +21,13 @@ const content = require('./content');
 const { buildBatch, GMB_CITIES } = require('./planner');
 // NEW: database compositor (zero image API). Replaces theme/photo image generation.
 const DB = require('./db_compositor');
+// NEW: title-aware rotation engine (in-memory uniqueness, no Redis).
+const { createRotation } = require('./rotation');
+let _rotation = null;
+function rotation() {
+  if (!_rotation) _rotation = createRotation(DB.catalog().chars, DB.catalog().bgs);
+  return _rotation;
+}
 
 // Map a content block to the database compositor's spec.
 function toDbSpec(block, post, opts) {
@@ -308,8 +315,15 @@ async function renderOnePost(post, outDir, urlBase, opts) {
       fs.writeFileSync(fn, buf); files.push(fn);
     }
   } else {
-    // Single post: one image from the database compositor (style auto-rotates).
+    // Single post: title-aware rotation engine picks style/bg/character to match the
+    // headline's mood; pose is derived from the chosen character (no contradictions).
+    const title = [block.headline, block.headline_accent, block.eyebrow, (post.focus && post.focus.label)].filter(Boolean).join(' ');
+    const sel = rotation().select(title);
     const spec = toDbSpec(block, post, opts);
+    spec.style = sel.style || spec.style;
+    spec.bgFile = sel.background || undefined;
+    spec.charFile = sel.character || undefined;
+    spec.intent = sel.intent || spec.intent;
     const buf = await DB.renderPost(spec, size);
     const fn = path.join(dayDir, `${post.id}.png`);
     fs.writeFileSync(fn, buf); files.push(fn);
