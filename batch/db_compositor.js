@@ -2,10 +2,13 @@ const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const fs = require('fs'), path = require('path');
 
 const ASSETS = process.env.DB_ASSETS || path.join(__dirname, 'assets_db');
-const CHAR_DIR = path.join(ASSETS, 'characters');
-const BG_DIR   = path.join(ASSETS, 'backgrounds');
-const ILL_DIR  = path.join(ASSETS, 'illustrations');
-const LOGO     = path.join(ASSETS, 'logo.png');
+const CHAR_DIR  = path.join(ASSETS, 'characters');
+const BG_DIR    = path.join(ASSETS, 'backgrounds');
+const DECOR_DIR = path.join(ASSETS, 'decor');
+const SCENE_DIR = path.join(ASSETS, 'scenes');
+const ICON_DIR  = path.join(ASSETS, 'icons');
+const ILL_DIR   = path.join(ASSETS, 'illustrations'); // legacy fallback
+const LOGO      = path.join(ASSETS, 'logo.png');
 
 const C = { navy:'#0b2147', navy2:'#0f2a55', orange:'#ff5f1b', yellow:'#F6B21B', teal:'#16a89a', white:'#ffffff', cloud:'#eef2f8' };
 const SCHEMES = [
@@ -41,7 +44,9 @@ let _cat=null;
 function catalog(){ if(_cat)return _cat;
   const r=d=>fs.existsSync(d)?fs.readdirSync(d).filter(f=>/\.png$/i.test(f)):[];
   const ills=r(ILL_DIR);
-  _cat={chars:r(CHAR_DIR),bgs:r(BG_DIR),ills,
+  _cat={chars:r(CHAR_DIR),bgs:r(BG_DIR),
+        decor:r(DECOR_DIR), scenes:r(SCENE_DIR), icons:r(ICON_DIR),
+        ills,
         vec:ills.filter(f=>f.startsWith('V_')), ico:ills.filter(f=>f.startsWith('I_')), geo:ills.filter(f=>f.startsWith('G_'))};
   return _cat; }
 // ---- VARIATION ENGINE ----------------------------------------------------
@@ -131,7 +136,8 @@ async function renderPost(spec,size){
     solidBg(ctx,w,h,scheme,vseed);
   }
 
-  const anchorRight = (vseed % 2 === 0); // alternate left/right by seed for variety
+  // anchor side: engine may force it (pointing poses point inward); else alternate by seed
+  const anchorRight = spec.anchor ? (spec.anchor === 'right') : (vseed % 2 === 0);
 
   // ---- SCRIM (drawn BEFORE the character so the figure stays bright) ----
   if (style==='human_office'){
@@ -173,7 +179,11 @@ async function renderPost(spec,size){
     ctx.beginPath();ctx.ellipse(dx+dw*0.5,h-12,dw*0.32,18,0,0,7);ctx.fill();ctx.restore();
     ctx.drawImage(ch,tb.l,tb.t,tb.w,tb.h,dx,dy,dw,dh);
   } else if (style==='illustration'){
-    const ill=await loadImage(path.join(ILL_DIR, pickVec(vseed)));
+    // standalone scene (already contains people) — full art, no character overlay
+    const sceneFile = spec.sceneFile;
+    const scenePath = sceneFile ? path.join(SCENE_DIR, sceneFile)
+                                : path.join(ILL_DIR, pickVec(vseed) || '');
+    const ill=await loadImage(scenePath);
     const tb=trimBox(ill);
     let dw, dh;
     if (!landscape){
@@ -186,9 +196,6 @@ async function renderPost(spec,size){
     const dx=artZone.x+(artZone.w-dw)/2, dy=(artZone.y+artZone.h)-dh;
     ctx.drawImage(ill,tb.l,tb.t,tb.w,tb.h,dx,dy,dw,dh);
   }
-
-  // ---- LOGO top-left everywhere ----
-  let yCursor=pad;
   try{ const logo=await loadImage(LOGO);
     const lw=w*(landscape?0.16:0.20); const lh=lw*(logo.height/logo.width);
     ctx.drawImage(logo,pad,pad*0.8,lw,lh); yCursor=pad*0.8+lh+pad*0.5;
